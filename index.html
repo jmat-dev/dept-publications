@@ -374,6 +374,7 @@ tr.total-row td{border-top:1.5px solid var(--line)}
             <option value="4">AY starts: April</option>
           </select>
           <select class="inp" id="a-yr" onchange="renderAdmin()" style="height:36px;width:120px;font-size:13px"><option value="all">All years</option></select>
+          <select class="inp" id="a-fac" onchange="renderAdmin()" style="height:36px;width:150px;font-size:13px"><option value="all">All faculty</option></select>
           <select class="inp" id="a-st" onchange="renderAdmin()" style="height:36px;width:120px;font-size:13px">
             <option value="all">All staff</option><option value="active">Active only</option><option value="inactive">Inactive only</option>
           </select>
@@ -689,7 +690,7 @@ async function staffFetch(){
   const orcid=document.getElementById('s-orcid').value.trim();
   const scopus=document.getElementById('s-scopus').value.trim();
   const wos=document.getElementById('s-wos').value.trim();
-  if(!orcid&&!scopus&&!name){showErr('s-err','err','alert-circle','Please enter at least your ORCID iD, Scopus ID, or name.');return;}
+  if(!orcid&&!scopus&&!name&&!wos){showErr('s-err','err','alert-circle','Please enter at least one ID (ORCID, Scopus, Web of Science, or your name).');return;}
   clearErr('s-err'); staffPubs=[]; sYr='all';
   document.getElementById('s-results').style.display='none';
   document.getElementById('s-pubs').innerHTML='';
@@ -702,9 +703,11 @@ async function staffFetch(){
     const r=await fetchORCID(orcid);
     if(Array.isArray(r)) staffPubs=staffPubs.concat(r); else errs.push('ORCID: '+r.error);
   }
-  txt.textContent='Querying OpenAlex (citations + indexing)…'; fill.style.width='50%';
-  const oa=await fetchOpenAlex({orcid,scopus,name});
-  if(Array.isArray(oa)) staffPubs=staffPubs.concat(oa); else errs.push('OpenAlex: '+oa.error);
+  if(orcid||scopus||name){
+    txt.textContent='Querying OpenAlex (citations + indexing)…'; fill.style.width='50%';
+    const oa=await fetchOpenAlex({orcid,scopus,name});
+    if(Array.isArray(oa)) staffPubs=staffPubs.concat(oa); else errs.push('OpenAlex: '+oa.error);
+  }
 
   if(wos && (getWosKey()||getWosProxy())){
     txt.textContent='Querying Web of Science…'; fill.style.width='80%';
@@ -881,10 +884,20 @@ function renderStaffGrid(){
         </div>
         <div class="scard-foot">
           <span class="cnt">${s.fetched?'<i class="ti ti-check" style="font-size:13px;vertical-align:-1px"></i> '+s.pubs.length+' publications':'Not fetched'}</span>
-          <button class="btn ghost-danger" onclick="removeStaff(${i})" aria-label="Remove"><i class="ti ti-trash"></i></button>
+          <div style="display:flex;gap:4px">
+            <button class="btn sm" style="height:32px;padding:0 10px" onclick="fetchOneStaff(${i})" title="Fetch this person"><i class="ti ti-refresh"></i></button>
+            <button class="btn ghost-danger" onclick="removeStaff(${i})" aria-label="Remove"><i class="ti ti-trash"></i></button>
+          </div>
         </div>
       </div>`).join('')}</div></div>
   </div>`;
+}
+async function fetchStaffPubs(s){
+  let pubs=[];
+  if(s.orcid){const r=await fetchORCID(s.orcid);if(Array.isArray(r))pubs=pubs.concat(r);}
+  if(s.orcid||s.scopus||s.name){const oa=await fetchOpenAlex({orcid:s.orcid,scopus:s.scopus,name:s.name});if(Array.isArray(oa))pubs=pubs.concat(oa);}
+  if(s.wos && (getWosKey()||getWosProxy())){const w=await fetchWoS(s.wos);if(Array.isArray(w))pubs=pubs.concat(w);}
+  return dedup(pubs).map(p=>({...p,staffName:s.name,dept:s.dept,status:s.status}));
 }
 async function fetchAllStaff(){
   if(!staffList.length)return;
@@ -895,18 +908,24 @@ async function fetchAllStaff(){
     const s=staffList[i];
     fill.style.width=Math.round((i/staffList.length)*100)+'%';
     txt.textContent=`Fetching ${s.name} — ${i+1} of ${staffList.length}…`;
-    let pubs=[];
-    if(s.orcid){const r=await fetchORCID(s.orcid);if(Array.isArray(r))pubs=pubs.concat(r);}
-    const oa=await fetchOpenAlex({orcid:s.orcid,scopus:s.scopus,name:s.name});
-    if(Array.isArray(oa))pubs=pubs.concat(oa);
-    if(s.wos && (getWosKey()||getWosProxy())){const w=await fetchWoS(s.wos);if(Array.isArray(w))pubs=pubs.concat(w);}
-    pubs=dedup(pubs).map(p=>({...p,staffName:s.name,dept:s.dept,status:s.status}));
-    s.pubs=pubs; s.fetched=true;
-    adminPubs=adminPubs.concat(pubs);
+    s.pubs=await fetchStaffPubs(s); s.fetched=true;
+    adminPubs=adminPubs.concat(s.pubs);
     await new Promise(r=>setTimeout(r,120));
   }
   fill.style.width='100%'; txt.textContent='Complete!';
   await new Promise(r=>setTimeout(r,500));
+  document.getElementById('a-prog').style.display='none';
+  renderStaffGrid(); updateAdminData();
+}
+async function fetchOneStaff(i){
+  const s=staffList[i]; if(!s)return;
+  document.getElementById('a-prog').style.display='block';
+  const fill=document.getElementById('a-fill'),txt=document.getElementById('a-prog-txt');
+  fill.style.width='30%'; txt.textContent=`Fetching ${s.name}…`;
+  s.pubs=await fetchStaffPubs(s); s.fetched=true;
+  adminPubs=adminPubs.filter(p=>p.staffName!==s.name).concat(s.pubs);
+  fill.style.width='100%'; txt.textContent=`${s.name}: ${s.pubs.length} publications`;
+  await new Promise(r=>setTimeout(r,600));
   document.getElementById('a-prog').style.display='none';
   renderStaffGrid(); updateAdminData();
 }
@@ -915,6 +934,11 @@ function updateAdminData(){
   document.getElementById('a-data').style.display='block';
   const years=[...new Set(adminPubs.map(p=>p.year).filter(Boolean))].sort((a,b)=>b-a);
   document.getElementById('a-yr').innerHTML='<option value="all">All years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  const fac=document.getElementById('a-fac');
+  const prev=fac.value;
+  const names=[...new Set(adminPubs.map(p=>p.staffName))].sort();
+  fac.innerHTML='<option value="all">All faculty</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(names.includes(prev)) fac.value=prev;
   renderAdmin();
 }
 function aView(v,btn){
@@ -924,7 +948,8 @@ function aView(v,btn){
 }
 function adminFiltered(){
   const yr=document.getElementById('a-yr').value, st=document.getElementById('a-st').value;
-  return adminPubs.filter(p=>(yr==='all'||p.year===yr)&&(st==='all'||p.status===st));
+  const fac=(document.getElementById('a-fac')||{}).value||'all';
+  return adminPubs.filter(p=>(yr==='all'||p.year===yr)&&(st==='all'||p.status===st)&&(fac==='all'||p.staffName===fac));
 }
 function renderAdmin(){
   const f=adminFiltered(), area=document.getElementById('a-table');
