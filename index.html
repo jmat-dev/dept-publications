@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.2.0/tabler-icons.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --ink:#16201c; --ink-soft:#5a6b63; --ink-faint:#8b9a92;
@@ -227,7 +228,7 @@ tr.total-row td{border-top:1.5px solid var(--line)}
     <div class="metrics">
       <div class="metric"><div class="mv" id="sm-total">0</div><div class="ml">Total publications</div></div>
       <div class="metric m-violet"><div class="mv" id="sm-oalex">0</div><div class="ml">Indexed (OpenAlex)</div></div>
-      <div class="metric m-gold"><div class="mv" id="sm-orcid">0</div><div class="ml">From ORCID profile</div></div>
+      <div class="metric m-gold"><div class="mv" id="sm-wos">0</div><div class="ml">Confirmed in WoS</div></div>
       <div class="metric m-coral"><div class="mv" id="sm-cite">0</div><div class="ml">Total citations</div></div>
     </div>
     <div class="toolbar">
@@ -241,6 +242,25 @@ tr.total-row td{border-top:1.5px solid var(--line)}
 
 <!-- ============ ADMIN PAGE ============ -->
 <section class="page" id="pg-admin">
+  <div id="admin-gate">
+    <div style="max-width:420px;margin:40px auto">
+      <div class="card">
+        <div class="card-pad" style="text-align:center;padding:36px 28px">
+          <div style="width:54px;height:54px;border-radius:14px;background:var(--green-soft);color:var(--green-deep);display:grid;place-items:center;font-size:26px;margin:0 auto 16px"><i class="ti ti-lock"></i></div>
+          <h2 class="serif" style="font-size:24px;margin-bottom:6px">Admin access</h2>
+          <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:20px" id="gate-sub">Enter the admin password to manage staff and view department data.</p>
+          <input type="password" class="inp" id="gate-pass" placeholder="Password" style="text-align:center;margin-bottom:12px" onkeydown="if(event.key==='Enter')gateSubmit()"/>
+          <button class="btn pri" style="width:100%" onclick="gateSubmit()"><i class="ti ti-login-2"></i>Unlock</button>
+          <div id="gate-err" style="font-size:12.5px;color:var(--red);margin-top:10px;min-height:16px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="admin-content" style="display:none">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <button class="btn sm" onclick="adminLock()"><i class="ti ti-lock"></i>Lock admin</button>
+  </div>
   <div class="page-head">
     <div class="eyebrow">Administration</div>
     <h2 class="serif">Department dashboard</h2>
@@ -284,6 +304,52 @@ tr.total-row td{border-top:1.5px solid var(--line)}
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-head"><h3><i class="ti ti-list-check"></i>Journal index lists (SCI / Scopus)</h3>
+      <span id="a-idx-status" style="font-size:12px;color:var(--ink-faint)"></span>
+    </div>
+    <div class="card-pad">
+      <div class="alert info" style="margin-bottom:16px"><i class="ti ti-info-circle"></i><span>Upload the official journal lists once. The portal matches each publication's ISSN against them to tag it SCI/SCIE, Scopus, both, or not indexed. Get the Scopus list free from <a href="https://www.elsevier.com/products/scopus/content" target="_blank" style="color:inherit;text-decoration:underline">elsevier.com/products/scopus/content</a> and the WoS/SCIE list from <a href="https://mjl.clarivate.com/" target="_blank" style="color:inherit;text-decoration:underline">mjl.clarivate.com</a> (free account).</span></div>
+      <div class="grid g2">
+        <div class="field">
+          <label><span class="badge bg-openalex">Scopus</span> source list (.xlsx / .csv)</label>
+          <input type="file" id="a-file-scopus" accept=".xlsx,.xls,.csv" onchange="uploadIndexList(this,'scopus')" class="inp" style="height:auto;padding:9px 11px"/>
+          <div id="a-scopus-note" style="font-size:12px;color:var(--ink-soft);margin-top:6px"></div>
+        </div>
+        <div class="field">
+          <label><span class="badge bg-wos">SCI / SCIE</span> Web of Science list (.xlsx / .csv)</label>
+          <input type="file" id="a-file-wos" accept=".xlsx,.xls,.csv" onchange="uploadIndexList(this,'wos')" class="inp" style="height:auto;padding:9px 11px"/>
+          <div id="a-wos-note" style="font-size:12px;color:var(--ink-soft);margin-top:6px"></div>
+        </div>
+      </div>
+      <button class="btn sm" style="margin-top:12px" onclick="clearIndexLists()"><i class="ti ti-trash"></i>Clear uploaded lists</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3><i class="ti ti-key"></i>Web of Science API</h3>
+      <span id="a-wos-api-status" style="font-size:12px;color:var(--ink-faint)"></span>
+    </div>
+    <div class="card-pad">
+      <div class="alert info" style="margin-bottom:16px"><i class="ti ti-info-circle"></i><span>With a WoS Starter API key, the portal queries each staff member's Researcher ID directly — any paper it returns is confirmed in Web of Science. If your browser blocks the call (CORS), enter a proxy URL below and run it from a server.</span></div>
+      <div class="grid g2">
+        <div class="field">
+          <label>WoS Starter API key</label>
+          <input type="password" class="inp" id="a-wos-key" placeholder="paste your Clarivate Starter key"/>
+        </div>
+        <div class="field">
+          <label>Proxy URL <span style="color:var(--ink-faint);font-weight:500">(optional — only if CORS blocks)</span></label>
+          <input type="text" class="inp" id="a-wos-proxy" placeholder="https://yourserver/wos_proxy.php"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+        <button class="btn pri sm" onclick="saveWosSettings()"><i class="ti ti-device-floppy"></i>Save</button>
+        <button class="btn sm" onclick="testWos()"><i class="ti ti-plug"></i>Test connection</button>
+        <span id="a-wos-test" style="font-size:12.5px;color:var(--ink-soft)"></span>
+      </div>
+    </div>
+  </div>
+
   <div id="a-prog" class="card" style="display:none">
     <div class="prog">
       <div class="prog-row"><div class="spin"></div><span id="a-prog-txt">Fetching…</span></div>
@@ -319,6 +385,7 @@ tr.total-row td{border-top:1.5px solid var(--line)}
       <div class="card-pad" id="a-table"></div>
     </div>
   </div>
+  </div>
 </section>
 
 </div>
@@ -329,7 +396,102 @@ tr.total-row td{border-top:1.5px solid var(--line)}
 
 <script>
 const STORE_KEY='deptPubPortal.staff.v1';
+const IDX_KEY='deptPubPortal.indexlists.v1';
+const ADMIN_KEY='deptPubPortal.adminpass.v1';
+const WOSKEY_KEY='deptPubPortal.woskey.v1';
+const WOSPROXY_KEY='deptPubPortal.wosproxy.v1';
 let staffPubs=[], staffList=[], adminPubs=[], curView='summary', sYr='all';
+let scopusISSN=new Set(), wosISSN=new Set();
+
+/* ---------- ISSN helpers ---------- */
+function normIssn(s){return String(s||'').toUpperCase().replace(/[^0-9X]/g,'').replace(/^(\d{4})(\d{3}[0-9X])$/,'$1-$2');}
+function indexStatus(p){
+  const issns=[p.issn,...(p.issnAll||[])].map(normIssn).filter(Boolean);
+  const inScopus=issns.some(i=>scopusISSN.has(i));
+  const inWos = p.inWos===true || issns.some(i=>wosISSN.has(i));
+  return {scopus:inScopus, sci:inWos,
+    label: inScopus&&inWos?'WoS + Scopus':inWos?'Web of Science':inScopus?'Scopus':(issns.length?'Not indexed':'Unknown')};
+}
+function saveIndexLists(){try{localStorage.setItem(IDX_KEY,JSON.stringify({scopus:[...scopusISSN],wos:[...wosISSN]}));}catch(e){}}
+function loadIndexLists(){try{const d=JSON.parse(localStorage.getItem(IDX_KEY));if(d){scopusISSN=new Set(d.scopus||[]);wosISSN=new Set(d.wos||[]);}}catch(e){}}
+
+function extractIssnsFromRows(rows){
+  const found=new Set();
+  const issnRe=/\b(\d{4}[- ]?\d{3}[\dxX])\b/g;
+  rows.forEach(row=>{
+    const cells=Array.isArray(row)?row:Object.values(row);
+    cells.forEach(c=>{
+      if(c==null) return;
+      const s=String(c);
+      let m;
+      while((m=issnRe.exec(s))!==null){ const n=normIssn(m[1]); if(/^\d{4}-\d{3}[0-9X]$/.test(n)) found.add(n); }
+    });
+  });
+  return found;
+}
+async function uploadIndexList(input,which){
+  const file=input.files[0]; if(!file) return;
+  const note=document.getElementById('a-'+which+'-note');
+  note.innerHTML='<i class="ti ti-loader" style="vertical-align:-2px"></i> Reading file…';
+  try{
+    const buf=await file.arrayBuffer();
+    let rows=[];
+    if(/\.csv$/i.test(file.name)){
+      const text=new TextDecoder().decode(buf);
+      rows=text.split(/\r?\n/).map(l=>l.split(','));
+    }else{
+      const wb=XLSX.read(buf,{type:'array'});
+      wb.SheetNames.forEach(sn=>{ rows=rows.concat(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1})); });
+    }
+    const issns=extractIssnsFromRows(rows);
+    if(which==='scopus') scopusISSN=issns; else wosISSN=issns;
+    saveIndexLists();
+    note.innerHTML=`<i class="ti ti-circle-check" style="color:var(--green);vertical-align:-2px"></i> ${issns.size.toLocaleString()} ISSNs loaded from ${esc(file.name)}.`;
+    updateIdxStatus();
+    if(adminPubs.length) renderAdmin();
+  }catch(e){ note.innerHTML=`<span style="color:var(--red)">Could not read file: ${esc(e.message)}</span>`; }
+}
+function clearIndexLists(){
+  scopusISSN=new Set(); wosISSN=new Set(); saveIndexLists();
+  document.getElementById('a-scopus-note').innerHTML='';
+  document.getElementById('a-wos-note').innerHTML='';
+  document.getElementById('a-file-scopus').value='';
+  document.getElementById('a-file-wos').value='';
+  updateIdxStatus(); if(adminPubs.length) renderAdmin();
+}
+function updateIdxStatus(){
+  const el=document.getElementById('a-idx-status'); if(!el) return;
+  const parts=[];
+  if(scopusISSN.size) parts.push(`Scopus: ${scopusISSN.size.toLocaleString()}`);
+  if(wosISSN.size) parts.push(`SCI: ${wosISSN.size.toLocaleString()}`);
+  el.textContent=parts.length?('Loaded — '+parts.join(' · ')):'No lists loaded yet';
+}
+
+/* ---------- WoS API settings ---------- */
+function loadWosSettings(){
+  const k=document.getElementById('a-wos-key'), p=document.getElementById('a-wos-proxy');
+  if(k) k.value=getWosKey();
+  if(p) p.value=getWosProxy();
+  updateWosApiStatus();
+}
+function saveWosSettings(){
+  localStorage.setItem(WOSKEY_KEY,document.getElementById('a-wos-key').value.trim());
+  localStorage.setItem(WOSPROXY_KEY,document.getElementById('a-wos-proxy').value.trim());
+  document.getElementById('a-wos-test').innerHTML='<i class="ti ti-circle-check" style="color:var(--green);vertical-align:-2px"></i> Saved.';
+  updateWosApiStatus();
+}
+function updateWosApiStatus(){
+  const el=document.getElementById('a-wos-api-status'); if(!el) return;
+  el.textContent = getWosKey() ? ('Key set'+(getWosProxy()?' · via proxy':'')) : 'No key — WoS fetch disabled';
+}
+async function testWos(){
+  const t=document.getElementById('a-wos-test');
+  if(!getWosKey()){t.innerHTML='<span style="color:var(--red)">Save a key first.</span>';return;}
+  t.innerHTML='<i class="ti ti-loader" style="vertical-align:-2px"></i> Testing…';
+  const r=await fetchWoS('A-1234-2020');
+  if(Array.isArray(r)) t.innerHTML='<i class="ti ti-circle-check" style="color:var(--green);vertical-align:-2px"></i> Connection OK — WoS reachable.';
+  else t.innerHTML=`<span style="color:var(--red)">Failed: ${esc(r.error)}. ${/HTTP 401|403/.test(r.error)?'Check the key.':'Likely CORS — add a proxy URL and run from a server.'}</span>`;
+}
 
 /* ---------- persistence ---------- */
 function saveStaff(){try{localStorage.setItem(STORE_KEY,JSON.stringify(staffList.map(s=>({...s,pubs:[],fetched:false}))));}catch(e){}}
@@ -342,12 +504,60 @@ function cleanOrcid(o){return (o||'').trim().replace('https://orcid.org/','').re
 function showErr(id,cls,icon,msg){document.getElementById(id).innerHTML=`<div class="alert ${cls}"><i class="ti ti-${icon}"></i><span>${msg}</span></div>`;}
 function clearErr(id){document.getElementById(id).innerHTML='';}
 
+let adminUnlocked=false;
+
+async function sha(s){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function adminPassSet(){return !!localStorage.getItem(ADMIN_KEY);}
+async function gateSubmit(){
+  const v=document.getElementById('gate-pass').value;
+  const err=document.getElementById('gate-err');
+  if(!v){err.textContent='Please enter a password.';return;}
+  const h=await sha(v);
+  if(!adminPassSet()){
+    if(v.length<4){err.textContent='Choose a password of at least 4 characters.';return;}
+    localStorage.setItem(ADMIN_KEY,h);
+    unlockAdmin();
+  }else if(localStorage.getItem(ADMIN_KEY)===h){
+    unlockAdmin();
+  }else{
+    err.textContent='Incorrect password.';
+    document.getElementById('gate-pass').value='';
+  }
+}
+function unlockAdmin(){
+  adminUnlocked=true;
+  document.getElementById('admin-gate').style.display='none';
+  document.getElementById('admin-content').style.display='block';
+  document.getElementById('gate-pass').value='';
+  document.getElementById('gate-err').textContent='';
+  renderStaffGrid(); updateIdxStatus(); loadWosSettings();
+}
+function adminLock(){
+  adminUnlocked=false;
+  document.getElementById('admin-content').style.display='none';
+  document.getElementById('admin-gate').style.display='block';
+  refreshGateText();
+}
+function refreshGateText(){
+  document.getElementById('gate-sub').textContent = adminPassSet()
+    ? 'Enter the admin password to manage staff and view department data.'
+    : 'First time here — set an admin password. Only someone with this password can open the admin side.';
+  document.querySelector('#admin-gate .btn.pri').innerHTML = adminPassSet()
+    ? '<i class="ti ti-login-2"></i>Unlock' : '<i class="ti ti-lock-plus"></i>Set password';
+}
+
 function goPage(p,btn){
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.nav button').forEach(e=>e.classList.remove('on'));
   document.getElementById('pg-'+p).classList.add('on');
   btn.classList.add('on');
-  if(p==='admin') renderStaffGrid();
+  if(p==='admin'){
+    if(adminUnlocked){ document.getElementById('admin-gate').style.display='none'; document.getElementById('admin-content').style.display='block'; renderStaffGrid(); }
+    else { document.getElementById('admin-gate').style.display='block'; document.getElementById('admin-content').style.display='none'; refreshGateText(); }
+  }
 }
 
 /* ---------- API: ORCID ---------- */
@@ -362,6 +572,7 @@ async function fetchORCID(orcid){
       const w=g['work-summary'] && g['work-summary'][0] ? g['work-summary'][0] : {};
       const ext=(w['external-ids'] && w['external-ids']['external-id']) || [];
       const doiObj=ext.find(e=>e['external-id-type']==='doi');
+      const issnObj=ext.find(e=>e['external-id-type']==='issn');
       const pd=w['publication-date']||{};
       return {
         title:(w.title && w.title.title && w.title.title.value) || 'Untitled',
@@ -369,6 +580,7 @@ async function fetchORCID(orcid){
         year:(pd.year && pd.year.value) || '',
         month:(pd.month && pd.month.value) ? parseInt(pd.month.value) : null,
         doi:doiObj ? doiObj['external-id-value'] : '',
+        issn:issnObj ? normIssn(issnObj['external-id-value']) : '',
         citations:0, type:w.type || 'journal-article', authors:'', source:'ORCID'
       };
     });
@@ -387,29 +599,75 @@ async function fetchOpenAlex(p){
     const r=await fetch(url);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d=await r.json();
-    return (d.results||[]).map(w=>({
+    return (d.results||[]).map(w=>{
+      const src=(w.primary_location && w.primary_location.source) || {};
+      const issns=src.issn || (src.issn_l?[src.issn_l]:[]);
+      return {
       title:w.title||'Untitled',
-      journal:(w.primary_location && w.primary_location.source && w.primary_location.source.display_name) || '',
+      journal:src.display_name || '',
       year:w.publication_year?String(w.publication_year):'',
       month:(w.publication_date && /^\d{4}-(\d{2})/.test(w.publication_date)) ? parseInt(w.publication_date.slice(5,7)) : null,
       doi:w.doi?w.doi.replace('https://doi.org/',''):'',
+      issn:(issns&&issns.length)?normIssn(issns[0]):'',
+      issnAll:(issns||[]).map(normIssn),
       citations:w.cited_by_count||0,
       type:w.type||'article',
       authors:(w.authorships||[]).slice(0,4).map(a=>a.author&&a.author.display_name).filter(Boolean).join(', '),
       source:'OpenAlex'
-    }));
+      };
+    });
   }catch(e){return {error:e.message};}
 }
 
-/* ---------- dedup (prefer OpenAlex for citation data) ---------- */
+/* ---------- API: Web of Science Starter ---------- */
+function getWosKey(){return (localStorage.getItem(WOSKEY_KEY)||'').trim();}
+function getWosProxy(){return (localStorage.getItem(WOSPROXY_KEY)||'').trim();}
+async function fetchWoS(researcherId){
+  const rid=(researcherId||'').trim();
+  if(!rid) return [];
+  const key=getWosKey();
+  if(!key) return {error:'No WoS API key set'};
+  const proxy=getWosProxy();
+  const base='https://api.clarivate.com/apis/wos-starter/v1/documents';
+  const qs=`db=WOS&q=${encodeURIComponent('AI='+rid)}&limit=50&page=1`;
+  const url = proxy ? (proxy + (proxy.includes('?')?'&':'?') + 'url=' + encodeURIComponent(base+'?'+qs)) : (base+'?'+qs);
+  try{
+    const headers = proxy ? {Accept:'application/json'} : {Accept:'application/json','X-ApiKey':key};
+    const r=await fetch(url,{headers});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const hits=d.hits||[];
+    return hits.map(h=>{
+      const src=h.source||{};
+      const ids=h.identifiers||{};
+      const issnRaw=ids.issn||ids.eissn||'';
+      return {
+        title:h.title||'Untitled',
+        journal:src.sourceTitle||'',
+        year:src.publishYear?String(src.publishYear):'',
+        month:(src.publishMonth&&/^\d+$/.test(String(src.publishMonth)))?parseInt(src.publishMonth):null,
+        doi:ids.doi||'',
+        issn:issnRaw?normIssn(issnRaw):'',
+        issnAll:[ids.issn,ids.eissn].filter(Boolean).map(normIssn),
+        citations:(h.citations&&h.citations[0]&&h.citations[0].count)||0,
+        type:(h.types&&h.types[0])||'Article',
+        authors:(h.names&&h.names.authors||[]).slice(0,4).map(a=>a.displayName).filter(Boolean).join(', '),
+        inWos:true,
+        source:'Web of Science'
+      };
+    });
+  }catch(e){return {error:e.message};}
+}
 function dedup(pubs){
   const byKey={};
   pubs.forEach(p=>{
     const k=(p.doi||'').toLowerCase() || (p.title||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,55);
     if(!k) return;
+    const wos = p.inWos || (byKey[k] && byKey[k].inWos);
     if(!byKey[k]) byKey[k]=p;
     else if(p.source==='OpenAlex' && byKey[k].source!=='OpenAlex') byKey[k]=p;
     else if(p.citations>byKey[k].citations) byKey[k]=p;
+    if(wos) byKey[k].inWos=true;
   });
   return Object.values(byKey).sort((a,b)=>(b.year||0)-(a.year||0));
 }
@@ -428,6 +686,7 @@ async function staffFetch(){
   const name=document.getElementById('s-name').value.trim();
   const orcid=document.getElementById('s-orcid').value.trim();
   const scopus=document.getElementById('s-scopus').value.trim();
+  const wos=document.getElementById('s-wos').value.trim();
   if(!orcid&&!scopus&&!name){showErr('s-err','err','alert-circle','Please enter at least your ORCID iD, Scopus ID, or name.');return;}
   clearErr('s-err'); staffPubs=[]; sYr='all';
   document.getElementById('s-results').style.display='none';
@@ -437,13 +696,20 @@ async function staffFetch(){
   let errs=[];
 
   if(orcid){
-    txt.textContent='Querying ORCID public records…'; fill.style.width='25%';
+    txt.textContent='Querying ORCID public records…'; fill.style.width='20%';
     const r=await fetchORCID(orcid);
     if(Array.isArray(r)) staffPubs=staffPubs.concat(r); else errs.push('ORCID: '+r.error);
   }
-  txt.textContent='Querying OpenAlex (citations + indexing)…'; fill.style.width='60%';
+  txt.textContent='Querying OpenAlex (citations + indexing)…'; fill.style.width='50%';
   const oa=await fetchOpenAlex({orcid,scopus,name});
   if(Array.isArray(oa)) staffPubs=staffPubs.concat(oa); else errs.push('OpenAlex: '+oa.error);
+
+  if(wos && getWosKey()){
+    txt.textContent='Querying Web of Science…'; fill.style.width='80%';
+    const w=await fetchWoS(wos);
+    if(Array.isArray(w)) staffPubs=staffPubs.concat(w);
+    else errs.push('WoS: '+w.error+(/(Failed|HTTP|CORS|network)/i.test(w.error)?' (browser may block WoS — set a proxy in Admin)':''));
+  }
 
   fill.style.width='100%';
   await new Promise(r=>setTimeout(r,300));
@@ -458,7 +724,7 @@ async function staffFetch(){
   staffPubs=dedup(staffPubs);
   document.getElementById('s-results').style.display='block';
   document.getElementById('sm-total').textContent=staffPubs.length;
-  document.getElementById('sm-orcid').textContent=staffPubs.filter(p=>p.source==='ORCID').length;
+  document.getElementById('sm-wos').textContent=staffPubs.filter(p=>p.inWos===true).length;
   document.getElementById('sm-oalex').textContent=staffPubs.filter(p=>p.source==='OpenAlex').length;
   document.getElementById('sm-cite').textContent=staffPubs.reduce((s,p)=>s+(p.citations||0),0).toLocaleString();
   buildPills(); renderStaffPubs(staffPubs);
@@ -484,7 +750,8 @@ function renderStaffPubs(pubs){
       <div class="pub-title">${esc(p.title)}</div>
       ${p.authors?`<div class="pub-authors">${esc(p.authors)}</div>`:''}
       <div class="pub-meta">
-        <span class="badge ${p.source==='ORCID'?'bg-orcid':'bg-openalex'}">${p.source}</span>
+        <span class="badge ${p.source==='ORCID'?'bg-orcid':p.source==='Web of Science'?'bg-wos':'bg-openalex'}">${p.source}</span>
+        ${p.inWos?'<span class="badge bg-wos"><i class="ti ti-circle-check" style="font-size:11px"></i> in WoS</span>':''}
         ${p.year?`<span class="badge bg-year">${p.year}</span>`:''}
         ${p.journal?`<span class="badge bg-year">${esc(p.journal.length>46?p.journal.slice(0,46)+'…':p.journal)}</span>`:''}
         ${p.citations?`<span class="badge bg-cite"><i class="ti ti-quote" style="font-size:11px"></i>${p.citations} cited</span>`:''}
@@ -496,8 +763,8 @@ function renderStaffPubs(pubs){
 function exportStaff(){
   const pubs=sYr==='all'?staffPubs:staffPubs.filter(p=>p.year===sYr);
   const name=document.getElementById('s-name').value.trim()||'staff';
-  downloadCSV([['Title','Authors','Journal','Year','Source','Citations','Type','DOI'],
-    ...pubs.map(p=>[p.title,p.authors,p.journal,p.year,p.source,p.citations,p.type,p.doi])],
+  downloadCSV([['Title','Authors','Journal','ISSN','Year','Source','Citations','Type','DOI','DOI link'],
+    ...pubs.map(p=>[p.title,p.authors,p.journal,p.issn||'',p.year,p.source,p.citations,p.type,p.doi,p.doi?'https://doi.org/'+p.doi:''])],
     `publications_${name.replace(/\s+/g,'_')}.csv`);
 }
 
@@ -630,6 +897,7 @@ async function fetchAllStaff(){
     if(s.orcid){const r=await fetchORCID(s.orcid);if(Array.isArray(r))pubs=pubs.concat(r);}
     const oa=await fetchOpenAlex({orcid:s.orcid,scopus:s.scopus,name:s.name});
     if(Array.isArray(oa))pubs=pubs.concat(oa);
+    if(s.wos && getWosKey()){const w=await fetchWoS(s.wos);if(Array.isArray(w))pubs=pubs.concat(w);}
     pubs=dedup(pubs).map(p=>({...p,staffName:s.name,dept:s.dept,status:s.status}));
     s.pubs=pubs; s.fetched=true;
     adminPubs=adminPubs.concat(pubs);
@@ -661,30 +929,32 @@ function renderAdmin(){
   if(!f.length){area.innerHTML='<div class="empty"><i class="ti ti-mood-empty"></i><p>No publications match the selected filters.</p></div>';return;}
 
   if(curView==='summary'){
+    const hasIdx=scopusISSN.size||wosISSN.size;
     const m={};
     f.forEach(p=>{
-      if(!m[p.staffName])m[p.staffName]={name:p.staffName,dept:p.dept,status:p.status,total:0,orcid:0,oalex:0,cite:0};
+      if(!m[p.staffName])m[p.staffName]={name:p.staffName,dept:p.dept,status:p.status,total:0,sci:0,scopus:0,cite:0};
       m[p.staffName].total++;
-      if(p.source==='ORCID')m[p.staffName].orcid++;else m[p.staffName].oalex++;
       m[p.staffName].cite+=p.citations||0;
+      const ix=indexStatus(p);
+      if(ix.sci)m[p.staffName].sci++;
+      if(ix.scopus)m[p.staffName].scopus++;
     });
     const rows=Object.values(m).sort((a,b)=>b.total-a.total);
     area.innerHTML=`<div class="tablewrap"><table>
-      <thead><tr><th>Staff member</th><th>Department</th><th>Status</th><th>Total</th><th>ORCID</th><th>OpenAlex</th><th>Citations</th></tr></thead>
+      <thead><tr><th>Staff member</th><th>Department</th><th>Status</th><th>Total</th>${hasIdx?'<th>SCI/SCIE</th><th>Scopus</th>':''}<th>Citations</th></tr></thead>
       <tbody>${rows.map(r=>`<tr>
         <td class="tcell-name">${esc(r.name)}</td>
         <td style="color:var(--ink-soft)">${esc(r.dept||'—')}</td>
         <td><span class="badge ${r.status==='active'?'bg-active':'bg-inactive'}">${r.status}</span></td>
         <td style="font-weight:600">${r.total}</td>
-        <td><span class="badge bg-orcid">${r.orcid}</span></td>
-        <td><span class="badge bg-openalex">${r.oalex}</span></td>
+        ${hasIdx?`<td><span class="badge bg-wos">${r.sci}</span></td><td><span class="badge bg-openalex">${r.scopus}</span></td>`:''}
         <td>${r.cite.toLocaleString()}</td></tr>`).join('')}
         <tr class="total-row"><td colspan="3">Department total</td>
         <td>${rows.reduce((s,r)=>s+r.total,0)}</td>
-        <td>${rows.reduce((s,r)=>s+r.orcid,0)}</td>
-        <td>${rows.reduce((s,r)=>s+r.oalex,0)}</td>
+        ${hasIdx?`<td>${rows.reduce((s,r)=>s+r.sci,0)}</td><td>${rows.reduce((s,r)=>s+r.scopus,0)}</td>`:''}
         <td>${rows.reduce((s,r)=>s+r.cite,0).toLocaleString()}</td></tr>
-      </tbody></table></div>`;
+      </tbody></table></div>
+      ${!hasIdx?'<div style="font-size:12px;color:var(--ink-faint);margin-top:10px"><i class="ti ti-info-circle" style="vertical-align:-2px"></i> Upload the Scopus &amp; SCI journal lists above to see indexing breakdown.</div>':''}`;
 
   }else if(curView==='yearwise'){
     const years=[...new Set(f.map(p=>p.year).filter(Boolean))].sort((a,b)=>b-a);
@@ -718,15 +988,18 @@ function renderAdmin(){
       <tr class="total-row"><td>Total</td>${names.map(n=>`<td>${f.filter(p=>p.staffName===n).length}</td>`).join('')}<td>${f.length}</td></tr>
       </tbody></table></div>`;
 
+    const hasIdx=scopusISSN.size||wosISSN.size;
     area.innerHTML=`<div class="tablewrap"><table>
-      <thead><tr><th>Staff</th><th>Title</th><th>Journal</th><th>Year</th><th>Source</th><th>Cited</th></tr></thead>
-      <tbody>${f.map(p=>`<tr>
+      <thead><tr><th>Staff</th><th>Title</th><th>Journal</th><th>Year</th>${hasIdx?'<th>Indexing</th>':''}<th>Source</th><th>Cited</th><th>DOI</th></tr></thead>
+      <tbody>${f.map(p=>{const ix=indexStatus(p);return `<tr>
         <td class="tcell-name">${esc(p.staffName)}</td>
-        <td>${esc(p.title.length>62?p.title.slice(0,62)+'…':p.title)}</td>
-        <td style="color:var(--ink-soft);font-size:12px">${esc((p.journal||'—').length>32?p.journal.slice(0,32)+'…':(p.journal||'—'))}</td>
+        <td>${esc(p.title.length>56?p.title.slice(0,56)+'…':p.title)}</td>
+        <td style="color:var(--ink-soft);font-size:12px">${esc((p.journal||'—').length>28?p.journal.slice(0,28)+'…':(p.journal||'—'))}</td>
         <td>${p.year||'—'}</td>
-        <td><span class="badge ${p.source==='ORCID'?'bg-orcid':'bg-openalex'}">${p.source}</span></td>
-        <td>${p.citations||0}</td></tr>`).join('')}</tbody></table></div>`;
+        ${hasIdx?`<td>${ix.sci||ix.scopus?`<span class="badge ${ix.sci?'bg-wos':'bg-openalex'}">${ix.label}</span>`:`<span style="color:var(--ink-faint);font-size:11px">${ix.label}</span>`}</td>`:''}
+        <td><span class="badge ${p.source==='ORCID'?'bg-orcid':p.source==='Web of Science'?'bg-wos':'bg-openalex'}">${p.source}</span></td>
+        <td>${p.citations||0}</td>
+        <td>${p.doi?`<a href="https://doi.org/${esc(p.doi)}" target="_blank" style="color:var(--green);font-size:11px;text-decoration:none">${esc(p.doi.length>22?p.doi.slice(0,22)+'…':p.doi)}</a>`:'<span style="color:var(--ink-faint)">—</span>'}</td></tr>`;}).join('')}</tbody></table></div>`;
   }
 }
 function exportAdmin(mode){
@@ -757,8 +1030,8 @@ function exportAdmin(mode){
     rows.push(['Total',...names.map(n=>f.filter(p=>p.staffName===n).length),f.length]);
     downloadCSV(rows,`dept_publications_academic_year_${yr}.csv`);
   }else{
-    downloadCSV([['Staff','Department','Status','Title','Authors','Journal','Year','Source','Citations','Type','DOI'],
-      ...f.map(p=>[p.staffName,p.dept,p.status,p.title,p.authors,p.journal,p.year,p.source,p.citations,p.type,p.doi])],
+    downloadCSV([['Staff','Department','Status','Title','Authors','Journal','ISSN','Year','Indexing','SCI/SCIE','Scopus','Source','Citations','Type','DOI','DOI link'],
+      ...f.map(p=>{const ix=indexStatus(p);return [p.staffName,p.dept,p.status,p.title,p.authors,p.journal,p.issn||'',p.year,ix.label,ix.sci?'Yes':'No',ix.scopus?'Yes':'No',p.source,p.citations,p.type,p.doi,p.doi?'https://doi.org/'+p.doi:''];})],
       `dept_publications_consolidated_${yr}.csv`);
   }
 }
@@ -774,7 +1047,11 @@ function downloadCSV(rows,fn){
 
 /* ---------- init ---------- */
 loadStaff();
+loadIndexLists();
+if(!localStorage.getItem(WOSKEY_KEY)) localStorage.setItem(WOSKEY_KEY,'d3cce9ef208efc78a49a09094a832e604f50228c');
 renderStaffGrid();
+updateIdxStatus();
+refreshGateText();
 </script>
 </body>
 </html>
