@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Department Publications Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.2.0/tabler-icons.min.css"/>
+<style>
+:root{
+  --ink:#16201c; --ink-soft:#5a6b63; --ink-faint:#8b9a92;
+  --paper:#fbfaf6; --surface:#ffffff; --surface-2:#f3f1e9;
+  --line:#e3e0d4; --line-soft:#eceadf;
+  --green:#1d6b4f; --green-deep:#0f4a36; --green-soft:#e4f0ea; --green-tint:#f1f7f3;
+  --gold:#b8893a; --gold-soft:#f6edda;
+  --violet:#574bc4; --violet-soft:#ece9fa;
+  --coral:#c2512c; --coral-soft:#fbe9e1;
+  --red:#b02a2a; --red-soft:#fbe8e8;
+  --radius:14px; --radius-sm:9px;
+  --shadow:0 1px 2px rgba(22,32,28,.04), 0 6px 24px rgba(22,32,28,.05);
+  --shadow-lg:0 4px 12px rgba(22,32,28,.08), 0 16px 48px rgba(22,32,28,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.55;
+  background-image:radial-gradient(circle at 1px 1px, rgba(22,32,28,.025) 1px, transparent 0);background-size:22px 22px;min-height:100vh}
+.serif{font-family:'Fraunces',serif}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:50;background:rgba(251,250,246,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.head-in{max-width:1180px;margin:0 auto;padding:0 24px;height:66px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:40px;height:40px;border-radius:11px;background:var(--green);color:#fff;display:grid;place-items:center;font-size:21px;box-shadow:0 4px 14px rgba(29,107,79,.28)}
+.brand-txt h1{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.2px;line-height:1.1}
+.brand-txt p{font-size:11.5px;color:var(--ink-faint);letter-spacing:.3px}
+.nav{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:11px;border:1px solid var(--line-soft)}
+.nav button{font-family:inherit;font-size:13.5px;padding:8px 18px;border:none;background:transparent;color:var(--ink-soft);border-radius:8px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:6px;transition:.18s}
+.nav button.on{background:var(--surface);color:var(--green-deep);box-shadow:0 1px 4px rgba(22,32,28,.08)}
+.nav button:hover:not(.on){color:var(--ink)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:34px 24px 80px}
+.page{display:none;animation:fade .4s ease}
+.page.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.page-head{margin-bottom:26px}
+.page-head .eyebrow{font-size:12px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--green);margin-bottom:7px}
+.page-head h2{font-family:'Fraunces',serif;font-size:33px;font-weight:600;letter-spacing:-.6px;line-height:1.08;margin-bottom:8px}
+.page-head p{font-size:14.5px;color:var(--ink-soft);max-width:620px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:18px}
+.card-pad{padding:24px}
+.card-head{padding:18px 24px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.card-head h3{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card-head h3 i{color:var(--green);font-size:18px}
+
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;letter-spacing:.2px}
+.field label .hint{font-weight:500;color:var(--green);font-size:11px}
+.inp{width:100%;height:42px;padding:0 13px;font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);transition:.15s}
+.inp:focus{outline:none;border-color:var(--green);background:#fff;box-shadow:0 0 0 3px var(--green-soft)}
+.inp::placeholder{color:var(--ink-faint)}
+select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%238b9a92' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+.btn{font-family:inherit;font-size:13.5px;font-weight:500;height:42px;padding:0 18px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.16s;white-space:nowrap}
+.btn:hover{background:var(--surface-2);border-color:var(--line)}
+.btn:active{transform:scale(.98)}
+.btn i{font-size:17px}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 4px 14px rgba(29,107,79,.24)}
+.btn.pri:hover{background:var(--green-deep);border-color:var(--green-deep)}
+.btn.gold{background:var(--gold-soft);border-color:#ecd9af;color:#7d5a1c}
+.btn.gold:hover{background:#f0e2c4}
+.btn.sm{height:36px;padding:0 13px;font-size:12.5px}
+.btn.sm i{font-size:15px}
+.btn.danger{background:var(--red-soft);border-color:#f0cccc;color:var(--red)}
+.btn.danger:hover{background:#f5d8d8}
+.btn.ghost-danger{border:none;background:transparent;color:var(--ink-faint);width:34px;height:34px;padding:0}
+.btn.ghost-danger:hover{background:var(--red-soft);color:var(--red)}
+
+.alert{border-radius:var(--radius-sm);padding:13px 16px;font-size:13.5px;margin-bottom:16px;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.alert i{font-size:18px;flex-shrink:0;margin-top:1px}
+.alert.err{background:var(--red-soft);color:var(--red);border:1px solid #f0cccc}
+.alert.warn{background:var(--gold-soft);color:#7d5a1c;border:1px solid #ecd9af}
+.alert.info{background:var(--green-tint);color:var(--green-deep);border:1px solid #cfe6da}
+
+.prog{padding:18px 24px}
+.prog-row{display:flex;align-items:center;gap:11px;font-size:13.5px;color:var(--ink-soft);margin-bottom:11px}
+.spin{width:17px;height:17px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:sp .7s linear infinite;flex-shrink:0}
+@keyframes sp{to{transform:rotate(360deg)}}
+.track{height:5px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,var(--green),#2a8c66);border-radius:3px;width:0;transition:width .35s ease}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:760px){.metrics{grid-template-columns:repeat(2,1fr)}}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
+.metric.m-gold::before{background:var(--gold)}
+.metric.m-violet::before{background:var(--violet)}
+.metric.m-coral::before{background:var(--coral)}
+.metric .mv{font-family:'Fraunces',serif;font-size:30px;font-weight:600;letter-spacing:-.5px;line-height:1}
+.metric .ml{font-size:12px;color:var(--ink-faint);font-weight:500;margin-top:6px;letter-spacing:.2px}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:18px}
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{font-family:inherit;font-size:12.5px;font-weight:500;padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer;transition:.15s}
+.pill:hover{border-color:var(--green);color:var(--green)}
+.pill.on{background:var(--green);border-color:var(--green);color:#fff}
+
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;letter-spacing:.2px}
+.bg-orcid{background:var(--green-soft);color:var(--green-deep)}
+.bg-openalex{background:var(--violet-soft);color:#3f349f}
+.bg-scholar{background:var(--gold-soft);color:#7d5a1c}
+.bg-wos{background:#e8eef7;color:#2a4a78}
+.bg-year{background:var(--surface-2);color:var(--ink-soft)}
+.bg-cite{background:var(--coral-soft);color:#8f3a1f}
+.bg-type{background:#f0ecf8;color:#5a4a86}
+.bg-active{background:var(--green-soft);color:var(--green-deep)}
+.bg-inactive{background:var(--surface-2);color:var(--ink-faint)}
+
+.pubs{display:flex;flex-direction:column;gap:11px}
+.pub{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;transition:.16s}
+.pub:hover{border-color:#d4d0c0;box-shadow:var(--shadow)}
+.pub-num{font-family:'Fraunces',serif;font-size:13px;color:var(--ink-faint);font-weight:600}
+.pub-title{font-size:14px;font-weight:600;line-height:1.4;margin:2px 0 6px}
+.pub-authors{font-size:12px;color:var(--ink-soft);margin-bottom:9px}
+.pub-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pub-meta a{font-size:11.5px;color:var(--green);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.pub-meta a:hover{text-decoration:underline}
+
+.empty{text-align:center;padding:48px 24px;color:var(--ink-faint)}
+.empty i{font-size:42px;opacity:.4;display:block;margin-bottom:12px}
+.empty p{font-size:14px;max-width:340px;margin:0 auto}
+
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.scard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;position:relative;transition:.16s}
+.scard.fetched{border-color:#bfe0cf}
+.scard.fetched::after{content:'\ea67';font-family:'tabler-icons';position:absolute;top:14px;right:14px;color:var(--green);font-size:17px}
+.scard-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--green),#2a8c66);color:#fff;display:grid;place-items:center;font-weight:600;font-size:15px;font-family:'Fraunces',serif}
+.status-toggle{cursor:pointer;border:none;font-family:inherit}
+.sname{font-size:14.5px;font-weight:600;letter-spacing:-.1px}
+.sdept{font-size:12px;color:var(--ink-soft);margin-bottom:10px;min-height:16px}
+.sids{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;min-height:20px}
+.scard-foot{display:flex;align-items:center;justify-content:space-between;padding-top:11px;border-top:1px solid var(--line-soft)}
+.scard-foot .cnt{font-size:12px;color:var(--ink-faint);font-weight:500}
+
+.tabbar{display:flex;gap:3px;background:var(--surface-2);padding:4px;border-radius:10px;border:1px solid var(--line-soft)}
+.tabbar button{font-family:inherit;font-size:13px;font-weight:500;padding:7px 16px;border:none;background:transparent;color:var(--ink-soft);border-radius:7px;cursor:pointer;transition:.15s}
+.tabbar button.on{background:var(--surface);color:var(--green-deep);box-shadow:0 1px 3px rgba(22,32,28,.07)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-faint);padding:13px 16px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:12px 16px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--green-tint)}
+tr.total-row{background:var(--surface-2)!important;font-weight:600}
+tr.total-row td{border-top:1.5px solid var(--line)}
+.tcell-name{font-weight:600;white-space:nowrap}
+
+.foot{text-align:center;padding:28px;font-size:12px;color:var(--ink-faint)}
+.foot a{color:var(--green);text-decoration:none}
+.kbd{font-family:ui-monospace,monospace;font-size:11px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--ink-soft)}
+.flex-end{display:flex;align-items:flex-end}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div class="brand">
+      <div class="brand-mark"><i class="ti ti-books"></i></div>
+      <div class="brand-txt">
+        <h1>Publications Portal</h1>
+        <p>DEPARTMENT RESEARCH OUTPUT &middot; POWERED BY FREE APIs</p>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="on" id="t-staff" onclick="goPage('staff',this)"><i class="ti ti-user-search"></i>Staff view</button>
+      <button id="t-admin" onclick="goPage('admin',this)"><i class="ti ti-shield-lock"></i>Admin</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ STAFF PAGE ============ -->
+<section class="page on" id="pg-staff">
+  <div class="page-head">
+    <div class="eyebrow">Self service</div>
+    <h2 class="serif">Fetch my publications</h2>
+    <p>Enter your researcher IDs to pull your publication record. ORCID gives the cleanest results; OpenAlex adds citation counts and works indexed across Scopus, Web of Science and Crossref.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-pad">
+      <div class="grid g3" style="margin-bottom:14px">
+        <div class="field"><label>Your name</label><input class="inp" id="s-name" placeholder="Dr. John Mathew"/></div>
+        <div class="field"><label>ORCID iD <span class="hint">&middot; most reliable</span></label><input class="inp" id="s-orcid" placeholder="0000-0002-1234-5678"/></div>
+        <div class="field"><label>Scopus Author ID</label><input class="inp" id="s-scopus" placeholder="57189023456"/></div>
+      </div>
+      <div class="grid g3">
+        <div class="field"><label>Google Scholar ID</label><input class="inp" id="s-scholar" placeholder="from your profile URL"/></div>
+        <div class="field"><label>Web of Science ID</label><input class="inp" id="s-wos" placeholder="A-1234-2020"/></div>
+        <div class="field flex-end"><button class="btn pri" style="width:100%" onclick="staffFetch()"><i class="ti ti-search"></i>Fetch publications</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="s-err"></div>
+
+  <div id="s-prog" class="card" style="display:none">
+    <div class="prog">
+      <div class="prog-row"><div class="spin"></div><span id="s-prog-txt">Querying ORCID…</span></div>
+      <div class="track"><div class="fill" id="s-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="s-results" style="display:none">
+    <div class="metrics">
+      <div class="metric"><div class="mv" id="sm-total">0</div><div class="ml">Total publications</div></div>
+      <div class="metric m-violet"><div class="mv" id="sm-oalex">0</div><div class="ml">Indexed (OpenAlex)</div></div>
+      <div class="metric m-gold"><div class="mv" id="sm-orcid">0</div><div class="ml">From ORCID profile</div></div>
+      <div class="metric m-coral"><div class="mv" id="sm-cite">0</div><div class="ml">Total citations</div></div>
+    </div>
+    <div class="toolbar">
+      <div class="pills" id="s-pills"></div>
+      <button class="btn gold sm" onclick="exportStaff()"><i class="ti ti-file-spreadsheet"></i>Export to CSV</button>
+    </div>
+  </div>
+
+  <div id="s-pubs"></div>
+</section>
+
+<!-- ============ ADMIN PAGE ============ -->
+<section class="page" id="pg-admin">
+  <div class="page-head">
+    <div class="eyebrow">Administration</div>
+    <h2 class="serif">Department dashboard</h2>
+    <p>Register staff members with their researcher IDs, fetch everyone's publications in one pass, then export year-wise or consolidated reports. Your staff list is saved in this browser automatically.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3><i class="ti ti-user-plus"></i>Register staff member</h3></div>
+    <div class="card-pad">
+      <div class="grid g4" style="margin-bottom:14px">
+        <div class="field"><label>Full name</label><input class="inp" id="a-name" placeholder="Dr. Jane Smith"/></div>
+        <div class="field"><label>ORCID iD</label><input class="inp" id="a-orcid" placeholder="0000-0002-…"/></div>
+        <div class="field"><label>Scopus Author ID</label><input class="inp" id="a-scopus" placeholder="571890…"/></div>
+        <div class="field"><label>Dept / designation</label><input class="inp" id="a-dept" placeholder="CSE · Asst. Professor"/></div>
+      </div>
+      <div class="grid g4">
+        <div class="field"><label>Google Scholar ID</label><input class="inp" id="a-scholar" placeholder="optional"/></div>
+        <div class="field"><label>Web of Science ID</label><input class="inp" id="a-wos" placeholder="optional"/></div>
+        <div class="field"><label>Status</label>
+          <select class="inp" id="a-status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+        </div>
+        <div class="field flex-end"><button class="btn pri" style="width:100%" onclick="addStaff()"><i class="ti ti-plus"></i>Add member</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="a-staff-area"></div>
+
+  <div id="a-prog" class="card" style="display:none">
+    <div class="prog">
+      <div class="prog-row"><div class="spin"></div><span id="a-prog-txt">Fetching…</span></div>
+      <div class="track"><div class="fill" id="a-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="a-data" style="display:none">
+    <div class="card">
+      <div class="card-head">
+        <div class="tabbar">
+          <button class="on" onclick="aView('summary',this)">Summary</button>
+          <button onclick="aView('yearwise',this)">Year-wise</button>
+          <button onclick="aView('all',this)">All publications</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select class="inp" id="a-yr" onchange="renderAdmin()" style="height:36px;width:130px;font-size:13px"><option value="all">All years</option></select>
+          <select class="inp" id="a-st" onchange="renderAdmin()" style="height:36px;width:130px;font-size:13px">
+            <option value="all">All staff</option><option value="active">Active only</option><option value="inactive">Inactive only</option>
+          </select>
+          <button class="btn gold sm" onclick="exportAdmin('yearwise')"><i class="ti ti-table"></i>Year-wise</button>
+          <button class="btn gold sm" onclick="exportAdmin('consolidated')"><i class="ti ti-file-spreadsheet"></i>Consolidated</button>
+        </div>
+      </div>
+      <div class="card-pad" id="a-table"></div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="foot">
+  Free &amp; open data via <a href="https://orcid.org" target="_blank">ORCID</a> &amp; <a href="https://openalex.org" target="_blank">OpenAlex</a> &middot; no API keys, no IP restrictions &middot; runs entirely in your browser
+</div>
+
+<script>
+const STORE_KEY='deptPubPortal.staff.v1';
+let staffPubs=[], staffList=[], adminPubs=[], curView='summary', sYr='all';
+
+/* ---------- persistence ---------- */
+function saveStaff(){try{localStorage.setItem(STORE_KEY,JSON.stringify(staffList.map(s=>({...s,pubs:[],fetched:false}))));}catch(e){}}
+function loadStaff(){try{const d=localStorage.getItem(STORE_KEY);if(d)staffList=JSON.parse(d);}catch(e){staffList=[];}}
+
+/* ---------- helpers ---------- */
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function ini(n){return n.trim().split(/\s+/).slice(0,2).map(w=>w[0]?w[0].toUpperCase():'').join('');}
+function cleanOrcid(o){return (o||'').trim().replace('https://orcid.org/','').replace(/\s/g,'');}
+function showErr(id,cls,icon,msg){document.getElementById(id).innerHTML=`<div class="alert ${cls}"><i class="ti ti-${icon}"></i><span>${msg}</span></div>`;}
+function clearErr(id){document.getElementById(id).innerHTML='';}
+
+function goPage(p,btn){
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.nav button').forEach(e=>e.classList.remove('on'));
+  document.getElementById('pg-'+p).classList.add('on');
+  btn.classList.add('on');
+  if(p==='admin') renderStaffGrid();
+}
+
+/* ---------- API: ORCID ---------- */
+async function fetchORCID(orcid){
+  orcid=cleanOrcid(orcid);
+  if(!/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(orcid)) return {error:'Invalid ORCID format'};
+  try{
+    const r=await fetch(`https://pub.orcid.org/v3.0/${orcid}/works`,{headers:{Accept:'application/json'}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    return (d.group||[]).map(g=>{
+      const w=g['work-summary'] && g['work-summary'][0] ? g['work-summary'][0] : {};
+      const ext=(w['external-ids'] && w['external-ids']['external-id']) || [];
+      const doiObj=ext.find(e=>e['external-id-type']==='doi');
+      return {
+        title:(w.title && w.title.title && w.title.title.value) || 'Untitled',
+        journal:(w['journal-title'] && w['journal-title'].value) || '',
+        year:(w['publication-date'] && w['publication-date'].year && w['publication-date'].year.value) || '',
+        doi:doiObj ? doiObj['external-id-value'] : '',
+        citations:0, type:w.type || 'journal-article', authors:'', source:'ORCID'
+      };
+    });
+  }catch(e){return {error:e.message};}
+}
+
+/* ---------- API: OpenAlex ---------- */
+async function fetchOpenAlex(p){
+  let filter='';
+  if(p.orcid){const o=cleanOrcid(p.orcid);filter=`author.orcid:${o}`;}
+  else if(p.scopus) filter=`author.scopus:${p.scopus}`;
+  else if(p.name) filter=`author.display_name.search:${encodeURIComponent(p.name)}`;
+  if(!filter) return [];
+  try{
+    const url=`https://api.openalex.org/works?filter=${filter}&per_page=200&mailto=portal@dept.edu`;
+    const r=await fetch(url);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    return (d.results||[]).map(w=>({
+      title:w.title||'Untitled',
+      journal:(w.primary_location && w.primary_location.source && w.primary_location.source.display_name) || '',
+      year:w.publication_year?String(w.publication_year):'',
+      doi:w.doi?w.doi.replace('https://doi.org/',''):'',
+      citations:w.cited_by_count||0,
+      type:w.type||'article',
+      authors:(w.authorships||[]).slice(0,4).map(a=>a.author&&a.author.display_name).filter(Boolean).join(', '),
+      source:'OpenAlex'
+    }));
+  }catch(e){return {error:e.message};}
+}
+
+/* ---------- dedup (prefer OpenAlex for citation data) ---------- */
+function dedup(pubs){
+  const byKey={};
+  pubs.forEach(p=>{
+    const k=(p.doi||'').toLowerCase() || (p.title||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,55);
+    if(!k) return;
+    if(!byKey[k]) byKey[k]=p;
+    else if(p.source==='OpenAlex' && byKey[k].source!=='OpenAlex') byKey[k]=p;
+    else if(p.citations>byKey[k].citations) byKey[k]=p;
+  });
+  return Object.values(byKey).sort((a,b)=>(b.year||0)-(a.year||0));
+}
+
+/* ============ STAFF VIEW ============ */
+async function staffFetch(){
+  const name=document.getElementById('s-name').value.trim();
+  const orcid=document.getElementById('s-orcid').value.trim();
+  const scopus=document.getElementById('s-scopus').value.trim();
+  if(!orcid&&!scopus&&!name){showErr('s-err','err','alert-circle','Please enter at least your ORCID iD, Scopus ID, or name.');return;}
+  clearErr('s-err'); staffPubs=[]; sYr='all';
+  document.getElementById('s-results').style.display='none';
+  document.getElementById('s-pubs').innerHTML='';
+  document.getElementById('s-prog').style.display='block';
+  const fill=document.getElementById('s-fill'), txt=document.getElementById('s-prog-txt');
+  let errs=[];
+
+  if(orcid){
+    txt.textContent='Querying ORCID public records…'; fill.style.width='25%';
+    const r=await fetchORCID(orcid);
+    if(Array.isArray(r)) staffPubs=staffPubs.concat(r); else errs.push('ORCID: '+r.error);
+  }
+  txt.textContent='Querying OpenAlex (citations + indexing)…'; fill.style.width='60%';
+  const oa=await fetchOpenAlex({orcid,scopus,name});
+  if(Array.isArray(oa)) staffPubs=staffPubs.concat(oa); else errs.push('OpenAlex: '+oa.error);
+
+  fill.style.width='100%';
+  await new Promise(r=>setTimeout(r,300));
+  document.getElementById('s-prog').style.display='none';
+
+  if(!staffPubs.length){
+    showErr('s-err','err','alert-circle', errs.length?errs.join(' &middot; '):'No publications found. Check the IDs and make sure your ORCID works are set to public.');
+    return;
+  }
+  if(errs.length) showErr('s-err','warn','alert-triangle','Showing partial results — '+errs.join(' &middot; '));
+
+  staffPubs=dedup(staffPubs);
+  document.getElementById('s-results').style.display='block';
+  document.getElementById('sm-total').textContent=staffPubs.length;
+  document.getElementById('sm-orcid').textContent=staffPubs.filter(p=>p.source==='ORCID').length;
+  document.getElementById('sm-oalex').textContent=staffPubs.filter(p=>p.source==='OpenAlex').length;
+  document.getElementById('sm-cite').textContent=staffPubs.reduce((s,p)=>s+(p.citations||0),0).toLocaleString();
+  buildPills(); renderStaffPubs(staffPubs);
+}
+
+function buildPills(){
+  const years=[...new Set(staffPubs.map(p=>p.year).filter(Boolean))].sort((a,b)=>b-a);
+  document.getElementById('s-pills').innerHTML=`<button class="pill on" onclick="filterYr('all',this)">All years</button>`+
+    years.map(y=>`<button class="pill" onclick="filterYr('${y}',this)">${y}</button>`).join('');
+}
+function filterYr(y,btn){
+  sYr=y;
+  document.querySelectorAll('#s-pills .pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderStaffPubs(y==='all'?staffPubs:staffPubs.filter(p=>p.year===y));
+}
+function renderStaffPubs(pubs){
+  const el=document.getElementById('s-pubs');
+  if(!pubs.length){el.innerHTML='<div class="empty"><i class="ti ti-books"></i><p>No publications for this filter.</p></div>';return;}
+  el.innerHTML='<div class="pubs">'+pubs.map((p,i)=>`
+    <div class="pub">
+      <span class="pub-num">${String(i+1).padStart(2,'0')}</span>
+      <div class="pub-title">${esc(p.title)}</div>
+      ${p.authors?`<div class="pub-authors">${esc(p.authors)}</div>`:''}
+      <div class="pub-meta">
+        <span class="badge ${p.source==='ORCID'?'bg-orcid':'bg-openalex'}">${p.source}</span>
+        ${p.year?`<span class="badge bg-year">${p.year}</span>`:''}
+        ${p.journal?`<span class="badge bg-year">${esc(p.journal.length>46?p.journal.slice(0,46)+'…':p.journal)}</span>`:''}
+        ${p.citations?`<span class="badge bg-cite"><i class="ti ti-quote" style="font-size:11px"></i>${p.citations} cited</span>`:''}
+        ${p.type&&!/article/i.test(p.type)?`<span class="badge bg-type">${esc(p.type)}</span>`:''}
+        ${p.doi?`<a href="https://doi.org/${esc(p.doi)}" target="_blank">DOI <i class="ti ti-external-link"></i></a>`:''}
+      </div>
+    </div>`).join('')+'</div>';
+}
+function exportStaff(){
+  const pubs=sYr==='all'?staffPubs:staffPubs.filter(p=>p.year===sYr);
+  const name=document.getElementById('s-name').value.trim()||'staff';
+  downloadCSV([['Title','Authors','Journal','Year','Source','Citations','Type','DOI'],
+    ...pubs.map(p=>[p.title,p.authors,p.journal,p.year,p.source,p.citations,p.type,p.doi])],
+    `publications_${name.replace(/\s+/g,'_')}.csv`);
+}
+
+/* ============ ADMIN VIEW ============ */
+function addStaff(){
+  const v=id=>document.getElementById(id).value.trim();
+  const name=v('a-name');
+  if(!name){alert('Name is required.');return;}
+  const orcid=v('a-orcid'),scopus=v('a-scopus'),scholar=v('a-scholar'),wos=v('a-wos'),dept=v('a-dept'),status=document.getElementById('a-status').value;
+  if(!orcid&&!scopus&&!scholar&&!wos){alert('Enter at least one researcher ID.');return;}
+  if(staffList.some(s=>s.name.toLowerCase()===name.toLowerCase())){alert('A staff member with this name already exists.');return;}
+  staffList.push({name,orcid,scopus,scholar,wos,dept,status,pubs:[],fetched:false});
+  ['a-name','a-orcid','a-scopus','a-scholar','a-wos','a-dept'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('a-status').value='active';
+  saveStaff(); renderStaffGrid();
+}
+function removeStaff(i){
+  if(!confirm('Remove '+staffList[i].name+'?'))return;
+  staffList.splice(i,1);
+  adminPubs=adminPubs.filter(p=>staffList.some(s=>s.name===p.staffName));
+  saveStaff(); renderStaffGrid(); updateAdminData();
+}
+function toggleStatus(i){
+  staffList[i].status=staffList[i].status==='active'?'inactive':'active';
+  adminPubs.forEach(p=>{if(p.staffName===staffList[i].name)p.status=staffList[i].status;});
+  saveStaff(); renderStaffGrid(); if(adminPubs.length)renderAdmin();
+}
+function renderStaffGrid(){
+  const area=document.getElementById('a-staff-area');
+  if(!staffList.length){
+    area.innerHTML='<div class="card"><div class="empty"><i class="ti ti-users"></i><p>No staff registered yet. Add your department members above, then fetch all publications at once.</p></div></div>';
+    document.getElementById('a-data').style.display='none'; return;
+  }
+  area.innerHTML=`<div class="card">
+    <div class="card-head">
+      <h3><i class="ti ti-users"></i>${staffList.length} staff member${staffList.length!==1?'s':''} &middot; ${staffList.filter(s=>s.status==='active').length} active</h3>
+      <button class="btn pri sm" onclick="fetchAllStaff()"><i class="ti ti-refresh"></i>Fetch all publications</button>
+    </div>
+    <div class="card-pad"><div class="staff-grid">${staffList.map((s,i)=>`
+      <div class="scard ${s.fetched?'fetched':''}">
+        <div class="scard-top">
+          <div class="avatar">${ini(s.name)}</div>
+          <button class="status-toggle badge ${s.status==='active'?'bg-active':'bg-inactive'}" onclick="toggleStatus(${i})" title="Click to toggle"><i class="ti ti-circle-filled" style="font-size:8px"></i>${s.status}</button>
+        </div>
+        <div class="sname">${esc(s.name)}</div>
+        <div class="sdept">${esc(s.dept||'—')}</div>
+        <div class="sids">
+          ${s.orcid?'<span class="badge bg-orcid">ORCID</span>':''}
+          ${s.scopus?'<span class="badge bg-openalex">Scopus</span>':''}
+          ${s.scholar?'<span class="badge bg-scholar">Scholar</span>':''}
+          ${s.wos?'<span class="badge bg-wos">WoS</span>':''}
+        </div>
+        <div class="scard-foot">
+          <span class="cnt">${s.fetched?'<i class="ti ti-check" style="font-size:13px;vertical-align:-1px"></i> '+s.pubs.length+' publications':'Not fetched'}</span>
+          <button class="btn ghost-danger" onclick="removeStaff(${i})" aria-label="Remove"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`).join('')}</div></div>
+  </div>`;
+}
+async function fetchAllStaff(){
+  if(!staffList.length)return;
+  adminPubs=[];
+  document.getElementById('a-prog').style.display='block';
+  const fill=document.getElementById('a-fill'),txt=document.getElementById('a-prog-txt');
+  for(let i=0;i<staffList.length;i++){
+    const s=staffList[i];
+    fill.style.width=Math.round((i/staffList.length)*100)+'%';
+    txt.textContent=`Fetching ${s.name} — ${i+1} of ${staffList.length}…`;
+    let pubs=[];
+    if(s.orcid){const r=await fetchORCID(s.orcid);if(Array.isArray(r))pubs=pubs.concat(r);}
+    const oa=await fetchOpenAlex({orcid:s.orcid,scopus:s.scopus,name:s.name});
+    if(Array.isArray(oa))pubs=pubs.concat(oa);
+    pubs=dedup(pubs).map(p=>({...p,staffName:s.name,dept:s.dept,status:s.status}));
+    s.pubs=pubs; s.fetched=true;
+    adminPubs=adminPubs.concat(pubs);
+    await new Promise(r=>setTimeout(r,120));
+  }
+  fill.style.width='100%'; txt.textContent='Complete!';
+  await new Promise(r=>setTimeout(r,500));
+  document.getElementById('a-prog').style.display='none';
+  renderStaffGrid(); updateAdminData();
+}
+function updateAdminData(){
+  if(!adminPubs.length){document.getElementById('a-data').style.display='none';return;}
+  document.getElementById('a-data').style.display='block';
+  const years=[...new Set(adminPubs.map(p=>p.year).filter(Boolean))].sort((a,b)=>b-a);
+  document.getElementById('a-yr').innerHTML='<option value="all">All years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  renderAdmin();
+}
+function aView(v,btn){
+  curView=v;
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); renderAdmin();
+}
+function adminFiltered(){
+  const yr=document.getElementById('a-yr').value, st=document.getElementById('a-st').value;
+  return adminPubs.filter(p=>(yr==='all'||p.year===yr)&&(st==='all'||p.status===st));
+}
+function renderAdmin(){
+  const f=adminFiltered(), area=document.getElementById('a-table');
+  if(!f.length){area.innerHTML='<div class="empty"><i class="ti ti-mood-empty"></i><p>No publications match the selected filters.</p></div>';return;}
+
+  if(curView==='summary'){
+    const m={};
+    f.forEach(p=>{
+      if(!m[p.staffName])m[p.staffName]={name:p.staffName,dept:p.dept,status:p.status,total:0,orcid:0,oalex:0,cite:0};
+      m[p.staffName].total++;
+      if(p.source==='ORCID')m[p.staffName].orcid++;else m[p.staffName].oalex++;
+      m[p.staffName].cite+=p.citations||0;
+    });
+    const rows=Object.values(m).sort((a,b)=>b.total-a.total);
+    area.innerHTML=`<div class="tablewrap"><table>
+      <thead><tr><th>Staff member</th><th>Department</th><th>Status</th><th>Total</th><th>ORCID</th><th>OpenAlex</th><th>Citations</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td class="tcell-name">${esc(r.name)}</td>
+        <td style="color:var(--ink-soft)">${esc(r.dept||'—')}</td>
+        <td><span class="badge ${r.status==='active'?'bg-active':'bg-inactive'}">${r.status}</span></td>
+        <td style="font-weight:600">${r.total}</td>
+        <td><span class="badge bg-orcid">${r.orcid}</span></td>
+        <td><span class="badge bg-openalex">${r.oalex}</span></td>
+        <td>${r.cite.toLocaleString()}</td></tr>`).join('')}
+        <tr class="total-row"><td colspan="3">Department total</td>
+        <td>${rows.reduce((s,r)=>s+r.total,0)}</td>
+        <td>${rows.reduce((s,r)=>s+r.orcid,0)}</td>
+        <td>${rows.reduce((s,r)=>s+r.oalex,0)}</td>
+        <td>${rows.reduce((s,r)=>s+r.cite,0).toLocaleString()}</td></tr>
+      </tbody></table></div>`;
+
+  }else if(curView==='yearwise'){
+    const years=[...new Set(f.map(p=>p.year).filter(Boolean))].sort((a,b)=>b-a);
+    const names=[...new Set(f.map(p=>p.staffName))].sort();
+    area.innerHTML=`<div class="tablewrap"><table>
+      <thead><tr><th>Year</th>${names.map(n=>`<th title="${esc(n)}">${esc(n.split(/\s+/).slice(-1)[0])}</th>`).join('')}<th>Total</th></tr></thead>
+      <tbody>${years.map(y=>{
+        const row={};names.forEach(n=>row[n]=0);
+        f.filter(p=>p.year===y).forEach(p=>{if(row[p.staffName]!==undefined)row[p.staffName]++;});
+        const tot=Object.values(row).reduce((a,b)=>a+b,0);
+        return `<tr><td><span class="badge bg-year">${y}</span></td>${names.map(n=>`<td>${row[n]||'·'}</td>`).join('')}<td style="font-weight:600">${tot}</td></tr>`;
+      }).join('')}
+      <tr class="total-row"><td>Total</td>${names.map(n=>`<td>${f.filter(p=>p.staffName===n).length}</td>`).join('')}<td>${f.length}</td></tr>
+      </tbody></table></div>`;
+
+  }else{
+    area.innerHTML=`<div class="tablewrap"><table>
+      <thead><tr><th>Staff</th><th>Title</th><th>Journal</th><th>Year</th><th>Source</th><th>Cited</th></tr></thead>
+      <tbody>${f.map(p=>`<tr>
+        <td class="tcell-name">${esc(p.staffName)}</td>
+        <td>${esc(p.title.length>62?p.title.slice(0,62)+'…':p.title)}</td>
+        <td style="color:var(--ink-soft);font-size:12px">${esc((p.journal||'—').length>32?p.journal.slice(0,32)+'…':(p.journal||'—'))}</td>
+        <td>${p.year||'—'}</td>
+        <td><span class="badge ${p.source==='ORCID'?'bg-orcid':'bg-openalex'}">${p.source}</span></td>
+        <td>${p.citations||0}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+}
+function exportAdmin(mode){
+  const f=adminFiltered(), yr=document.getElementById('a-yr').value;
+  if(!f.length){alert('No data to export.');return;}
+  if(mode==='yearwise'){
+    const years=[...new Set(f.map(p=>p.year).filter(Boolean))].sort((a,b)=>b-a);
+    const names=[...new Set(f.map(p=>p.staffName))].sort();
+    const rows=[['Year',...names,'Total']];
+    years.forEach(y=>{
+      const row={};names.forEach(n=>row[n]=0);
+      f.filter(p=>p.year===y).forEach(p=>{if(row[p.staffName]!==undefined)row[p.staffName]++;});
+      rows.push([y,...names.map(n=>row[n]),Object.values(row).reduce((a,b)=>a+b,0)]);
+    });
+    rows.push(['Total',...names.map(n=>f.filter(p=>p.staffName===n).length),f.length]);
+    downloadCSV(rows,`dept_publications_yearwise_${yr}.csv`);
+  }else{
+    downloadCSV([['Staff','Department','Status','Title','Authors','Journal','Year','Source','Citations','Type','DOI'],
+      ...f.map(p=>[p.staffName,p.dept,p.status,p.title,p.authors,p.journal,p.year,p.source,p.citations,p.type,p.doi])],
+      `dept_publications_consolidated_${yr}.csv`);
+  }
+}
+
+/* ---------- CSV ---------- */
+function downloadCSV(rows,fn){
+  const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=fn; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(a.href);
+}
+
+/* ---------- init ---------- */
+loadStaff();
+renderStaffGrid();
+</script>
+</body>
+</html>
