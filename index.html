@@ -269,6 +269,21 @@ tr.total-row td{border-top:1.5px solid var(--line)}
 
   <div id="a-staff-area"></div>
 
+  <div class="card">
+    <div class="card-head"><h3><i class="ti ti-clipboard-list"></i>Bulk import staff</h3>
+      <span style="font-size:12px;color:var(--ink-faint)">Paste rows — names &amp; IDs are auto-detected</span>
+    </div>
+    <div class="card-pad">
+      <textarea class="inp" id="a-bulk" style="height:140px;padding:11px 13px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5;resize:vertical" placeholder="Paste your spreadsheet rows here. Each row can contain the name plus any of: Google Scholar URL, ORCID, Scopus URL, Web of Science URL/ID. The parser pulls the IDs out automatically."></textarea>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+        <button class="btn pri sm" onclick="parseBulk()"><i class="ti ti-wand"></i>Parse &amp; preview</button>
+        <button class="btn sm" onclick="document.getElementById('a-bulk').value=''"><i class="ti ti-eraser"></i>Clear</button>
+        <span id="a-bulk-note" style="font-size:12.5px;color:var(--ink-soft)"></span>
+      </div>
+      <div id="a-bulk-preview" style="margin-top:14px"></div>
+    </div>
+  </div>
+
   <div id="a-prog" class="card" style="display:none">
     <div class="prog">
       <div class="prog-row"><div class="spin"></div><span id="a-prog-txt">Fetching…</span></div>
@@ -282,14 +297,22 @@ tr.total-row td{border-top:1.5px solid var(--line)}
         <div class="tabbar">
           <button class="on" onclick="aView('summary',this)">Summary</button>
           <button onclick="aView('yearwise',this)">Year-wise</button>
+          <button onclick="aView('academic',this)">Academic year</button>
           <button onclick="aView('all',this)">All publications</button>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <select class="inp" id="a-yr" onchange="renderAdmin()" style="height:36px;width:130px;font-size:13px"><option value="all">All years</option></select>
-          <select class="inp" id="a-st" onchange="renderAdmin()" style="height:36px;width:130px;font-size:13px">
+          <select class="inp" id="a-ay-start" onchange="renderAdmin()" style="height:36px;width:150px;font-size:12.5px" title="Academic year starts in">
+            <option value="6" selected>AY starts: June</option>
+            <option value="7">AY starts: July</option>
+            <option value="1">AY starts: January</option>
+            <option value="4">AY starts: April</option>
+          </select>
+          <select class="inp" id="a-yr" onchange="renderAdmin()" style="height:36px;width:120px;font-size:13px"><option value="all">All years</option></select>
+          <select class="inp" id="a-st" onchange="renderAdmin()" style="height:36px;width:120px;font-size:13px">
             <option value="all">All staff</option><option value="active">Active only</option><option value="inactive">Inactive only</option>
           </select>
           <button class="btn gold sm" onclick="exportAdmin('yearwise')"><i class="ti ti-table"></i>Year-wise</button>
+          <button class="btn gold sm" onclick="exportAdmin('academic')"><i class="ti ti-table"></i>Academic yr</button>
           <button class="btn gold sm" onclick="exportAdmin('consolidated')"><i class="ti ti-file-spreadsheet"></i>Consolidated</button>
         </div>
       </div>
@@ -339,10 +362,12 @@ async function fetchORCID(orcid){
       const w=g['work-summary'] && g['work-summary'][0] ? g['work-summary'][0] : {};
       const ext=(w['external-ids'] && w['external-ids']['external-id']) || [];
       const doiObj=ext.find(e=>e['external-id-type']==='doi');
+      const pd=w['publication-date']||{};
       return {
         title:(w.title && w.title.title && w.title.title.value) || 'Untitled',
         journal:(w['journal-title'] && w['journal-title'].value) || '',
-        year:(w['publication-date'] && w['publication-date'].year && w['publication-date'].year.value) || '',
+        year:(pd.year && pd.year.value) || '',
+        month:(pd.month && pd.month.value) ? parseInt(pd.month.value) : null,
         doi:doiObj ? doiObj['external-id-value'] : '',
         citations:0, type:w.type || 'journal-article', authors:'', source:'ORCID'
       };
@@ -366,6 +391,7 @@ async function fetchOpenAlex(p){
       title:w.title||'Untitled',
       journal:(w.primary_location && w.primary_location.source && w.primary_location.source.display_name) || '',
       year:w.publication_year?String(w.publication_year):'',
+      month:(w.publication_date && /^\d{4}-(\d{2})/.test(w.publication_date)) ? parseInt(w.publication_date.slice(5,7)) : null,
       doi:w.doi?w.doi.replace('https://doi.org/',''):'',
       citations:w.cited_by_count||0,
       type:w.type||'article',
@@ -386,6 +412,15 @@ function dedup(pubs){
     else if(p.citations>byKey[k].citations) byKey[k]=p;
   });
   return Object.values(byKey).sort((a,b)=>(b.year||0)-(a.year||0));
+}
+
+/* ---------- academic year ---------- */
+function ayStartMonth(){return parseInt((document.getElementById('a-ay-start')||{}).value||6);}
+function academicYear(p, startMonth){
+  const y=parseInt(p.year); if(!y) return '';
+  const m=p.month||startMonth;
+  const start = m>=startMonth ? y : y-1;
+  return start+'-'+String(start+1).slice(-2);
 }
 
 /* ============ STAFF VIEW ============ */
@@ -467,6 +502,66 @@ function exportStaff(){
 }
 
 /* ============ ADMIN VIEW ============ */
+let bulkParsed=[];
+function extractIds(text){
+  const scholar=(text.match(/[?&]user=([A-Za-z0-9_-]+)/)||[])[1]||'';
+  const orcid=(text.match(/(\d{4}-\d{4}-\d{4}-\d{3}[\dX])/)||[])[1]||'';
+  const scopus=(text.match(/authorId=(\d+)/)||[])[1]||'';
+  let wos=(text.match(/author\/record\/([A-Za-z0-9-]+)/)||[])[1]||'';
+  if(!wos){const m=text.match(/\b([A-Z]{2,4}-\d{4}-\d{4})\b/);if(m)wos=m[1];}
+  return {scholar,orcid,scopus,wos};
+}
+function parseBulk(){
+  let raw=document.getElementById('a-bulk').value;
+  if(!raw.trim()){document.getElementById('a-bulk-note').textContent='Paste some rows first.';return;}
+  let out='',q=false;
+  for(const ch of raw.replace(/\r/g,'')){
+    if(ch==='"'){q=!q;continue;}
+    if(q && (ch==='\n'||ch==='\t')){continue;}
+    if(q && ch===' '){continue;}
+    out+=ch;
+  }
+  const lines=out.split('\n').map(l=>l.trim()).filter(l=>/^\d+\s/.test(l));
+  bulkParsed=lines.map(line=>{
+    const rest=line.replace(/^\d+\s+/,'');
+    const nameMatch=rest.match(/^([A-Za-z.\s]+?)(?=https?:|[A-Za-z]+,|0000-|0009-|\t|$)/);
+    let name=(nameMatch?nameMatch[1]:rest).trim().replace(/\s{2,}/g,' ');
+    if(!name||name.length<2) name='(unnamed)';
+    return {name, ...extractIds(line), dept:'', status:'active'};
+  }).filter(r=>r.name!=='(unnamed)' || r.orcid||r.scopus||r.scholar||r.wos);
+  renderBulkPreview();
+}
+function renderBulkPreview(){
+  const el=document.getElementById('a-bulk-preview');
+  const note=document.getElementById('a-bulk-note');
+  if(!bulkParsed.length){el.innerHTML='';note.textContent='No rows detected.';return;}
+  const withId=bulkParsed.filter(r=>r.orcid||r.scopus||r.scholar).length;
+  note.innerHTML=`<i class="ti ti-circle-check" style="color:var(--green);vertical-align:-2px"></i> Detected <b>${bulkParsed.length}</b> staff (${withId} with usable IDs).`;
+  el.innerHTML=`<div class="tablewrap" style="max-height:280px;overflow-y:auto"><table>
+    <thead><tr><th>Name</th><th>ORCID</th><th>Scopus</th><th>Scholar</th><th>WoS</th></tr></thead>
+    <tbody>${bulkParsed.map(r=>`<tr>
+      <td class="tcell-name">${esc(r.name)}</td>
+      <td>${r.orcid?`<span class="badge bg-orcid">${esc(r.orcid)}</span>`:'<span style="color:var(--ink-faint)">—</span>'}</td>
+      <td>${r.scopus?`<span class="badge bg-openalex">${esc(r.scopus)}</span>`:'<span style="color:var(--ink-faint)">—</span>'}</td>
+      <td>${r.scholar?`<span class="badge bg-scholar">${esc(r.scholar)}</span>`:'<span style="color:var(--ink-faint)">—</span>'}</td>
+      <td>${r.wos?`<span class="badge bg-wos">${esc(r.wos)}</span>`:'<span style="color:var(--ink-faint)">—</span>'}</td>
+    </tr>`).join('')}</tbody></table></div>
+    <button class="btn pri sm" style="margin-top:12px" onclick="importBulk()"><i class="ti ti-download"></i>Import all ${bulkParsed.length} into portal</button>`;
+}
+function importBulk(){
+  let added=0,skipped=0;
+  bulkParsed.forEach(r=>{
+    if(staffList.some(s=>s.name.toLowerCase()===r.name.toLowerCase())){skipped++;return;}
+    staffList.push({name:r.name,orcid:r.orcid,scopus:r.scopus,scholar:r.scholar,wos:r.wos,dept:r.dept,status:r.status,pubs:[],fetched:false});
+    added++;
+  });
+  bulkParsed=[];
+  document.getElementById('a-bulk').value='';
+  document.getElementById('a-bulk-preview').innerHTML='';
+  document.getElementById('a-bulk-note').innerHTML=`<i class="ti ti-circle-check" style="color:var(--green);vertical-align:-2px"></i> Imported ${added} staff${skipped?`, skipped ${skipped} duplicate(s)`:''}.`;
+  saveStaff(); renderStaffGrid();
+}
+
 function addStaff(){
   const v=id=>document.getElementById(id).value.trim();
   const name=v('a-name');
@@ -605,7 +700,24 @@ function renderAdmin(){
       <tr class="total-row"><td>Total</td>${names.map(n=>`<td>${f.filter(p=>p.staffName===n).length}</td>`).join('')}<td>${f.length}</td></tr>
       </tbody></table></div>`;
 
-  }else{
+  }else if(curView==='academic'){
+    const sm=ayStartMonth();
+    f.forEach(p=>p._ay=academicYear(p,sm));
+    const ays=[...new Set(f.map(p=>p._ay).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+    const names=[...new Set(f.map(p=>p.staffName))].sort();
+    const monthName=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][sm];
+    area.innerHTML=`<div style="font-size:12px;color:var(--ink-soft);margin-bottom:12px"><i class="ti ti-info-circle" style="vertical-align:-2px"></i> Academic year runs ${monthName}–${['','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'][sm]}. Publications without a known month are placed by calendar year.</div>
+      <div class="tablewrap"><table>
+      <thead><tr><th>Academic year</th>${names.map(n=>`<th title="${esc(n)}">${esc(n.split(/\s+/).slice(-1)[0])}</th>`).join('')}<th>Total</th></tr></thead>
+      <tbody>${ays.map(ay=>{
+        const row={};names.forEach(n=>row[n]=0);
+        f.filter(p=>p._ay===ay).forEach(p=>{if(row[p.staffName]!==undefined)row[p.staffName]++;});
+        const tot=Object.values(row).reduce((a,b)=>a+b,0);
+        return `<tr><td><span class="badge bg-year">AY ${ay}</span></td>${names.map(n=>`<td>${row[n]||'·'}</td>`).join('')}<td style="font-weight:600">${tot}</td></tr>`;
+      }).join('')}
+      <tr class="total-row"><td>Total</td>${names.map(n=>`<td>${f.filter(p=>p.staffName===n).length}</td>`).join('')}<td>${f.length}</td></tr>
+      </tbody></table></div>`;
+
     area.innerHTML=`<div class="tablewrap"><table>
       <thead><tr><th>Staff</th><th>Title</th><th>Journal</th><th>Year</th><th>Source</th><th>Cited</th></tr></thead>
       <tbody>${f.map(p=>`<tr>
@@ -631,6 +743,19 @@ function exportAdmin(mode){
     });
     rows.push(['Total',...names.map(n=>f.filter(p=>p.staffName===n).length),f.length]);
     downloadCSV(rows,`dept_publications_yearwise_${yr}.csv`);
+  }else if(mode==='academic'){
+    const sm=ayStartMonth();
+    f.forEach(p=>p._ay=academicYear(p,sm));
+    const ays=[...new Set(f.map(p=>p._ay).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+    const names=[...new Set(f.map(p=>p.staffName))].sort();
+    const rows=[['Academic year',...names,'Total']];
+    ays.forEach(ay=>{
+      const row={};names.forEach(n=>row[n]=0);
+      f.filter(p=>p._ay===ay).forEach(p=>{if(row[p.staffName]!==undefined)row[p.staffName]++;});
+      rows.push(['AY '+ay,...names.map(n=>row[n]),Object.values(row).reduce((a,b)=>a+b,0)]);
+    });
+    rows.push(['Total',...names.map(n=>f.filter(p=>p.staffName===n).length),f.length]);
+    downloadCSV(rows,`dept_publications_academic_year_${yr}.csv`);
   }else{
     downloadCSV([['Staff','Department','Status','Title','Authors','Journal','Year','Source','Citations','Type','DOI'],
       ...f.map(p=>[p.staffName,p.dept,p.status,p.title,p.authors,p.journal,p.year,p.source,p.citations,p.type,p.doi])],
