@@ -331,7 +331,7 @@ tr.total-row td{border-top:1.5px solid var(--line)}
       <span id="a-wos-api-status" style="font-size:12px;color:var(--ink-faint)"></span>
     </div>
     <div class="card-pad">
-      <div class="alert info" style="margin-bottom:16px"><i class="ti ti-info-circle"></i><span>With a WoS Starter API key, the portal queries each staff member's Researcher ID directly — any paper it returns is confirmed in Web of Science. If your browser blocks the call (CORS), enter a proxy URL below and run it from a server.</span></div>
+      <div class="alert info" style="margin-bottom:16px"><i class="ti ti-info-circle"></i><span>Web of Science blocks direct browser calls (CORS). The free fix: deploy the Cloudflare Worker (see the <code>wos-worker.js</code> file — your key goes inside it), then paste your Worker URL in the Proxy field below. Leave the key field empty when using a proxy. With a Worker set, any paper WoS returns is confirmed in Web of Science.</span></div>
       <div class="grid g2">
         <div class="field">
           <label>WoS Starter API key</label>
@@ -482,15 +482,17 @@ function saveWosSettings(){
 }
 function updateWosApiStatus(){
   const el=document.getElementById('a-wos-api-status'); if(!el) return;
-  el.textContent = getWosKey() ? ('Key set'+(getWosProxy()?' · via proxy':'')) : 'No key — WoS fetch disabled';
+  if(getWosProxy()) el.textContent='Proxy set — WoS active';
+  else if(getWosKey()) el.textContent='Key set (direct) — may be blocked by CORS';
+  else el.textContent='No key or proxy — WoS fetch disabled';
 }
 async function testWos(){
   const t=document.getElementById('a-wos-test');
-  if(!getWosKey()){t.innerHTML='<span style="color:var(--red)">Save a key first.</span>';return;}
+  if(!getWosKey() && !getWosProxy()){t.innerHTML='<span style="color:var(--red)">Save a key or proxy URL first.</span>';return;}
   t.innerHTML='<i class="ti ti-loader" style="vertical-align:-2px"></i> Testing…';
   const r=await fetchWoS('A-1234-2020');
   if(Array.isArray(r)) t.innerHTML='<i class="ti ti-circle-check" style="color:var(--green);vertical-align:-2px"></i> Connection OK — WoS reachable.';
-  else t.innerHTML=`<span style="color:var(--red)">Failed: ${esc(r.error)}. ${/HTTP 401|403/.test(r.error)?'Check the key.':'Likely CORS — add a proxy URL and run from a server.'}</span>`;
+  else t.innerHTML=`<span style="color:var(--red)">Failed: ${esc(r.error)}. ${/HTTP 401|HTTP 403/.test(r.error)?'Check the key.':'If no proxy is set, this is likely CORS — deploy the free Cloudflare Worker and paste its URL above.'}</span>`;
 }
 
 /* ---------- persistence ---------- */
@@ -626,8 +628,8 @@ async function fetchWoS(researcherId){
   const rid=(researcherId||'').trim();
   if(!rid) return [];
   const key=getWosKey();
-  if(!key) return {error:'No WoS API key set'};
   const proxy=getWosProxy();
+  if(!key && !proxy) return {error:'No WoS API key or proxy set'};
   const base='https://api.clarivate.com/apis/wos-starter/v1/documents';
   const qs=`db=WOS&q=${encodeURIComponent('AI='+rid)}&limit=50&page=1`;
   const url = proxy ? (proxy + (proxy.includes('?')?'&':'?') + 'url=' + encodeURIComponent(base+'?'+qs)) : (base+'?'+qs);
@@ -704,7 +706,7 @@ async function staffFetch(){
   const oa=await fetchOpenAlex({orcid,scopus,name});
   if(Array.isArray(oa)) staffPubs=staffPubs.concat(oa); else errs.push('OpenAlex: '+oa.error);
 
-  if(wos && getWosKey()){
+  if(wos && (getWosKey()||getWosProxy())){
     txt.textContent='Querying Web of Science…'; fill.style.width='80%';
     const w=await fetchWoS(wos);
     if(Array.isArray(w)) staffPubs=staffPubs.concat(w);
@@ -897,7 +899,7 @@ async function fetchAllStaff(){
     if(s.orcid){const r=await fetchORCID(s.orcid);if(Array.isArray(r))pubs=pubs.concat(r);}
     const oa=await fetchOpenAlex({orcid:s.orcid,scopus:s.scopus,name:s.name});
     if(Array.isArray(oa))pubs=pubs.concat(oa);
-    if(s.wos && getWosKey()){const w=await fetchWoS(s.wos);if(Array.isArray(w))pubs=pubs.concat(w);}
+    if(s.wos && (getWosKey()||getWosProxy())){const w=await fetchWoS(s.wos);if(Array.isArray(w))pubs=pubs.concat(w);}
     pubs=dedup(pubs).map(p=>({...p,staffName:s.name,dept:s.dept,status:s.status}));
     s.pubs=pubs; s.fetched=true;
     adminPubs=adminPubs.concat(pubs);
